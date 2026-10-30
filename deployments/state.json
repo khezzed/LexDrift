@@ -1,0 +1,11 @@
+{
+  "deployerPrivateKey": "0x3c2997c73be1c44d204dd8f53ef2493b868bed5d8c40f2d2fd4e24b45810be1c",
+  "lexVaultDeployTx": "0x66246c703c419e2394401ad0c53a66fee9518b0db35a6ea3775ac2b52d6d0c86",
+  "updatedAt": "2026-10-30T21:56:04.257Z",
+  "lexVaultAddress": "0x270BBA964dB0C88363de6986Ef8D88090864456b",
+  "charterGateDeployTx": "0xab2389771250a24fcaa2f42d6b3833bd4c7e0aba72fa48460ee9eb6ba66246b0",
+  "charterGateAddress": "0xa7ae55747b61d4Eb9d7024F0C19bd6499262c51c",
+  "driftAuditorDeployTx": "0x589fbe5c1e6e8bc234b9ec0d91a3476bf12df5e359726ad57d4b3f28706d0557",
+  "driftAuditorAddress": "0xB6C7bC7cbd182c90cbc814Ec3d80CCEc604E600d",
+  "configureTx": "0x83ace986013f4e5938b356edb9c0d9966c94507cd60d468d64c641efad3f3749"
+}

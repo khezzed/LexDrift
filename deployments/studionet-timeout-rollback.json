@@ -1,0 +1,14 @@
+{
+  "id": "case_5_stage_timeout",
+  "title": "Case 5: Stage Deadline Timeout Recovery (EXPIRED_UNATTESTED + Deposit Rollback)",
+  "charterId": 4,
+  "charterOpenTx": "0xe8370f31314012c0b61be4cac985ee5d758aa897a2687ea55cef28f5b4bfcddd",
+  "advanceTimeTx": "0x7b14a4257291ca7e0c2ad82222f59895ce3b046689ac01764456c5ed3ce97ef0",
+  "expireStageTx": "0x0e4c3c928c387b955aa5b64eb9fcfe9bae91eeb53e0072eee3c363f37975accb",
+  "txHash": "0x0e4c3c928c387b955aa5b64eb9fcfe9bae91eeb53e0072eee3c363f37975accb",
+  "outcome": "EXPIRED_UNATTESTED",
+  "statusOnChain": "EXPIRED_UNATTESTED",
+  "bountyAfterTimeout": 0,
+  "accountingInvariantValid": true,
+  "explorerLink": "https://explorer-studio.genlayer.com/tx/0x0e4c3c928c387b955aa5b64eb9fcfe9bae91eeb53e0072eee3c363f37975accb"
+}

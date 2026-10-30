@@ -1,0 +1,132 @@
+{
+  "projectName": "LexDrift",
+  "tagline": "Real-time Multi-Snapshot Autonomous Legal & Governance Policy Drift Sentinel on GenLayer",
+  "network": {
+    "networkName": "GenLayer StudioNet",
+    "chainId": 61999,
+    "rpcUrl": "https://studio.genlayer.com/api"
+  },
+  "runnerHash": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6",
+  "contracts": {
+    "lexVault": {
+      "address": "0x270BBA964dB0C88363de6986Ef8D88090864456b",
+      "deployTxHash": "0x66246c703c419e2394401ad0c53a66fee9518b0db35a6ea3775ac2b52d6d0c86",
+      "sourceSha256": "76efab36bbd714c2e606598317ae3005de757a5862f149f8b668f31147b6ba72",
+      "onChainSha256": "76efab36bbd714c2e606598317ae3005de757a5862f149f8b668f31147b6ba72",
+      "verified": true
+    },
+    "charterGate": {
+      "address": "0xa7ae55747b61d4Eb9d7024F0C19bd6499262c51c",
+      "deployTxHash": "0xab2389771250a24fcaa2f42d6b3833bd4c7e0aba72fa48460ee9eb6ba66246b0",
+      "sourceSha256": "c2bb2e2ed4130b56741eebe435f0039bb423c24666cb21ce11206d8badee299d",
+      "onChainSha256": "c2bb2e2ed4130b56741eebe435f0039bb423c24666cb21ce11206d8badee299d",
+      "verified": true
+    },
+    "driftAuditor": {
+      "address": "0xB6C7bC7cbd182c90cbc814Ec3d80CCEc604E600d",
+      "deployTxHash": "0x589fbe5c1e6e8bc234b9ec0d91a3476bf12df5e359726ad57d4b3f28706d0557",
+      "sourceSha256": "748403821c926264f9767510037331fae6b67528a69d76b88cde5142accb67cc",
+      "onChainSha256": "748403821c926264f9767510037331fae6b67528a69d76b88cde5142accb67cc",
+      "verified": true
+    }
+  },
+  "bootstrapping": {
+    "configureTxHash": "0x83ace986013f4e5938b356edb9c0d9966c94507cd60d468d64c641efad3f3749",
+    "bootstrapper": "",
+    "stageTimeoutSeconds": 1800
+  },
+  "scenarios": [
+    {
+      "id": "case_1_vague_covenant",
+      "title": "Case 1: Vague Covenant Rejection (RuleGate REJECTED_CHARTER + Deposit Refund)",
+      "charterId": 1,
+      "txHash": "0x4a19aa05930ab6412f553b89e5bb252006b60510aef7b73630c1ad98c434364e",
+      "workerTxHash": "0x8c63e104710be4359e1a9d694e9b60a2705ddb5ec484a75de792bbd336e1c56c",
+      "outcome": "REJECTED_CHARTER",
+      "statusOnChain": "REJECTED_CHARTER",
+      "bounty": 0,
+      "sponsorRefundCredit": 1000,
+      "reason": "Vague aspirational language without observable criteria",
+      "accountingInvariantValid": true,
+      "explorerLink": "https://explorer-studio.genlayer.com/tx/0x4a19aa05930ab6412f553b89e5bb252006b60510aef7b73630c1ad98c434364e"
+    },
+    {
+      "id": "case_2_benign_revision",
+      "title": "Case 2: Benign Revision Rejection (BENIGN_REVISION + Bond Forfeited to Bounty)",
+      "charterId": 2,
+      "claimId": 1,
+      "charterOpenTx": "0x08704eb3b869da86218ccf61c8ff316ca4259e7d50c02ae3871ec1786a0beb51",
+      "charterAttestTx": "0x790cf936d7ce8afa566d6851b86255e7cbef522e9728700a5e0d9ca03fb07484",
+      "claimSealTx": "0xd072095b824f79772f3d7326850fbf9fb24ea88416b6f553c052c0a57737ccde",
+      "claimDiscloseTx": "0xac4da641943acf63fe591718d86e9fa43a50e5ec52d756800ad88d08b3df9e24",
+      "driftAuditTx": "0xc78d92edf79ee9602fbf6179dacc15c1cc03874d7089a87484a778de0b9ee81c",
+      "txHash": "0xc78d92edf79ee9602fbf6179dacc15c1cc03874d7089a87484a778de0b9ee81c",
+      "outcome": "BENIGN_REVISION",
+      "claimStatus": "REJECTED_BENIGN_REVISION",
+      "charterStatus": "ACTIVE",
+      "baselineQuote": "## License\n\n  [MIT](LICENSE)",
+      "augmentedBounty": 1500,
+      "accountingInvariantValid": true,
+      "explorerLink": "https://explorer-studio.genlayer.com/tx/0xc78d92edf79ee9602fbf6179dacc15c1cc03874d7089a87484a778de0b9ee81c"
+    },
+    {
+      "id": "case_3_unrelated_evidence",
+      "title": "Case 3: Unrelated Evidence Rejection (REJECTED_EVIDENCE + Sponsor Bond Transfer)",
+      "charterId": 2,
+      "claimId": 2,
+      "claimSealTx": "0x8c14100a119c9a46cc0949b14d19f01b2bdefd0b9d25d1c8fe3ec48c98de16cc",
+      "claimDiscloseTx": "0xf06a75a1090f372fa0b2ac4d8a483b585a84fcf38d153ae089137fa510fb01ca",
+      "driftAuditTx": "0xea986f71e3bdb77c50aaa735be07f172a14cd02870a6641a04a9ac22cc5df437",
+      "txHash": "0xea986f71e3bdb77c50aaa735be07f172a14cd02870a6641a04a9ac22cc5df437",
+      "outcome": "REJECTED_EVIDENCE",
+      "claimStatus": "REJECTED_EVIDENCE",
+      "closureBasis": "REJECTED_EVIDENCE:ecc5f634fdff8695:47cc252bc883d035:44b90488066d:a6dbc30856e8",
+      "accountingInvariantValid": true,
+      "explorerLink": "https://explorer-studio.genlayer.com/tx/0xea986f71e3bdb77c50aaa735be07f172a14cd02870a6641a04a9ac22cc5df437"
+    },
+    {
+      "id": "case_4_material_drift",
+      "title": "Case 4: Verified Material Drift (Terraform MPL-2.0 to BSL-1.1 + Pull Payment Settlement)",
+      "charterId": 3,
+      "claimId": 3,
+      "charterOpenTx": "0x2588e76912d5d45b30e5ce93a90510fafc2874a0d477378ace4fdeca5007a319",
+      "charterAttestTx": "0x5e75664416455b9b330067c2cd88cf04d436d4137389bc29416075382f7d57d8",
+      "claimSealTx": "0x11dd8c11f8a6ec5ae36feeed3abb9ca4a2953f0d0c811e9ec16469544208337c",
+      "claimDiscloseTx": "0x82002677dbc3075422de36a0ca8f50ba87bf86bc321a40243971ba30a4c0a007",
+      "driftAuditTx": "0x64d0bb875cc89f661f78f0ee3c31299948db84fb1fa17596a577672d68f25125",
+      "txHash": "0x64d0bb875cc89f661f78f0ee3c31299948db84fb1fa17596a577672d68f25125",
+      "requestWithdrawalTx": "0x7e867b9c506d6a1d8f4c6da355640bdc75ebfbbebfd3a55d177babfa201ee48d",
+      "reconcileWithdrawalTx": "0xa0bdfa31527d22783717b4ad00c9c4092f4ab3edb21e5f858ad9a4a871e63315",
+      "outcome": "MATERIAL_DRIFT",
+      "claimStatus": "SETTLED_MATERIAL_DRIFT",
+      "charterStatus": "SETTLED_DRIFT",
+      "payoutAmount": 1500,
+      "withdrawalStatus": "RECONCILED",
+      "accountingInvariantValid": true,
+      "explorerLink": "https://explorer-studio.genlayer.com/tx/0x64d0bb875cc89f661f78f0ee3c31299948db84fb1fa17596a577672d68f25125"
+    },
+    {
+      "id": "case_5_stage_timeout",
+      "title": "Case 5: Stage Deadline Timeout Recovery (EXPIRED_UNATTESTED + Deposit Rollback)",
+      "charterId": 4,
+      "charterOpenTx": "0xe8370f31314012c0b61be4cac985ee5d758aa897a2687ea55cef28f5b4bfcddd",
+      "advanceTimeTx": "0x7b14a4257291ca7e0c2ad82222f59895ce3b046689ac01764456c5ed3ce97ef0",
+      "expireStageTx": "0x0e4c3c928c387b955aa5b64eb9fcfe9bae91eeb53e0072eee3c363f37975accb",
+      "txHash": "0x0e4c3c928c387b955aa5b64eb9fcfe9bae91eeb53e0072eee3c363f37975accb",
+      "outcome": "EXPIRED_UNATTESTED",
+      "statusOnChain": "EXPIRED_UNATTESTED",
+      "bountyAfterTimeout": 0,
+      "accountingInvariantValid": true,
+      "explorerLink": "https://explorer-studio.genlayer.com/tx/0x0e4c3c928c387b955aa5b64eb9fcfe9bae91eeb53e0072eee3c363f37975accb"
+    }
+  ],
+  "accountingLog": [],
+  "updatedAt": "2026-10-30T22:25:29.533Z",
+  "finalAccounting": {
+    "total_escrow": 1500,
+    "total_credits": 2500,
+    "total_pending_outbound": 0,
+    "total_value_locked": 4000,
+    "invariant_valid": true
+  }
+}

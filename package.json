@@ -1,0 +1,32 @@
+{
+  "name": "lex-drift",
+  "version": "1.0.0",
+  "description": "LexDrift: Real-time Multi-Snapshot Autonomous Legal & Governance Policy Drift Sentinel on GenLayer",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "probe": "tsx deploy/probeSources.ts",
+    "test:direct": ".\\.venv\\Scripts\\pytest tests/direct -v",
+    "deploy:studionet": "tsx deploy/deployLexDrift.ts",
+    "e2e:studionet": "tsx deploy/e2eLexDrift.ts",
+    "verify:proof": "tsx deploy/verifyProof.ts"
+  },
+  "keywords": [
+    "genlayer",
+    "intelligent-contracts",
+    "legal-drift",
+    "policy-governance",
+    "charter-protection"
+  ],
+  "author": "LexDrift Team",
+  "license": "MIT",
+  "dependencies": {
+    "genlayer-js": "^1.2.0",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "@types/node": "^22.8.1"
+  }
+}

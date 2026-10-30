@@ -1,0 +1,47 @@
+{
+  "projectName": "LexDrift",
+  "tagline": "Real-time Multi-Snapshot Autonomous Legal & Governance Policy Drift Sentinel on GenLayer",
+  "network": {
+    "networkName": "GenLayer StudioNet",
+    "chainId": 61999,
+    "rpcUrl": "https://studio.genlayer.com/api"
+  },
+  "runnerHash": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6",
+  "deployedAt": "2026-10-30T21:56:44.440Z",
+  "deployer": "0xc130A7a4C4F22b2644Eaa62F5D13F14c941860aC",
+  "contracts": {
+    "lexVault": {
+      "address": "0x270BBA964dB0C88363de6986Ef8D88090864456b",
+      "deployTxHash": "0x66246c703c419e2394401ad0c53a66fee9518b0db35a6ea3775ac2b52d6d0c86",
+      "sourceSha256": "76efab36bbd714c2e606598317ae3005de757a5862f149f8b668f31147b6ba72",
+      "onChainSha256": "76efab36bbd714c2e606598317ae3005de757a5862f149f8b668f31147b6ba72",
+      "verified": true
+    },
+    "charterGate": {
+      "address": "0xa7ae55747b61d4Eb9d7024F0C19bd6499262c51c",
+      "deployTxHash": "0xab2389771250a24fcaa2f42d6b3833bd4c7e0aba72fa48460ee9eb6ba66246b0",
+      "sourceSha256": "c2bb2e2ed4130b56741eebe435f0039bb423c24666cb21ce11206d8badee299d",
+      "onChainSha256": "c2bb2e2ed4130b56741eebe435f0039bb423c24666cb21ce11206d8badee299d",
+      "verified": true
+    },
+    "driftAuditor": {
+      "address": "0xB6C7bC7cbd182c90cbc814Ec3d80CCEc604E600d",
+      "deployTxHash": "0x589fbe5c1e6e8bc234b9ec0d91a3476bf12df5e359726ad57d4b3f28706d0557",
+      "sourceSha256": "748403821c926264f9767510037331fae6b67528a69d76b88cde5142accb67cc",
+      "onChainSha256": "748403821c926264f9767510037331fae6b67528a69d76b88cde5142accb67cc",
+      "verified": true
+    }
+  },
+  "bootstrapping": {
+    "configureTxHash": "0x83ace986013f4e5938b356edb9c0d9966c94507cd60d468d64c641efad3f3749",
+    "bootstrapper": "",
+    "stageTimeoutSeconds": 1800
+  },
+  "initialAccounting": {
+    "total_escrow": 0,
+    "total_credits": 0,
+    "total_pending_outbound": 0,
+    "total_value_locked": 0,
+    "invariant_valid": true
+  }
+}
