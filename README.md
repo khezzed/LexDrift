@@ -195,7 +195,26 @@ cd frontend
 npm install
 npm run dev
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser (API health endpoint available at `http://localhost:3000/api/health`).
+
+### 5. Production Deployment (Vercel)
+The Next.js frontend is configured with `frontend/vercel.json` pre-populating all StudioNet environment variables (`NEXT_PUBLIC_*`).
+> [!NOTE]
+> On Windows, local `vercel build` fails due to symlink resolution. Always deploy using a remote build:
+```bash
+cd frontend
+npx vercel login
+npx vercel --prod --yes
+```
+Upon authentication, Vercel completes the remote build and yields the live production `.vercel.app` deployment.
+
+---
+
+## Release Verification & Commit Hash
+- **Git Commit SHA**: `8f20aed1f0834490fde1ee5c96e10a204f96fd1e`
+- **Proof Manifest**: [`deploy/proof.json`](deploy/proof.json)
+- **Local Server**: `http://localhost:3000`
+- **GenLayer StudioNet Network**: Chain ID `61999` (RPC: `https://studio.genlayer.com/api`)
 
 ---
 

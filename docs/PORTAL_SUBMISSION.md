@@ -57,10 +57,25 @@ Live on StudioNet with 5 finalized proof scenarios, timeout rollbacks, and 100% 
    npm install
    npm run dev
    ```
-   Open `http://localhost:5173` to explore active governance charters, test commit-reveal claim disclosures, review comparative drift boolean matrices, and view pull-payment reconciliations.
+   Open `http://localhost:3000` to explore active governance charters, test commit-reveal claim disclosures, review comparative drift boolean matrices, and view pull-payment reconciliations. Health check endpoint: `http://localhost:3000/api/health`.
 
-4. **Inspect Live Explorer Transactions**:
+4. **Production Deployment (Vercel)**:
+   The frontend includes `frontend/vercel.json` with all `NEXT_PUBLIC_*` StudioNet variables pre-configured. To deploy via remote build (bypassing Windows local symlink issues):
+   ```bash
+   cd frontend
+   npx vercel login
+   npx vercel --prod --yes
+   ```
+
+5. **Inspect Live Explorer Transactions**:
    Verify all on-chain transactions directly on the GenLayer StudioNet Explorer.
+
+---
+
+### Release Integrity & Proof Manifest
+- **Git Commit SHA**: `8f20aed1f0834490fde1ee5c96e10a204f96fd1e`
+- **Proof Manifest**: `deploy/proof.json` & `frontend/lib/proofManifest.json`
+- **Local Server**: `http://localhost:3000` (Verified HTTP 200 on `/` and `/api/health`)
 
 ---
 
