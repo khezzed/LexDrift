@@ -17,10 +17,19 @@ export function Footer() {
               Decentralized consensus verification of immutable covenants, multi-snapshot chronology,
               substring containment proofs, and pull-credit restitution.
             </p>
-            <div className="mt-3 flex items-center space-x-2 text-[11px] font-mono text-gray-500">
-              <Terminal className="h-3.5 w-3.5 text-cyan-500" />
-              <span>Runner Hash:</span>
-              <span className="text-cyan-400">{proofManifest.runnerHash}</span>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-mono text-gray-500">
+              <div className="flex items-center space-x-1.5">
+                <Terminal className="h-3.5 w-3.5 text-cyan-500" />
+                <span>Runner:</span>
+                <span className="text-cyan-400">{proofManifest.runnerHash}</span>
+              </div>
+              {proofManifest.gitCommit && (
+                <div className="flex items-center space-x-1.5">
+                  <Database className="h-3.5 w-3.5 text-gold-500" />
+                  <span>Git Commit:</span>
+                  <span className="text-gold-400 font-mono">{proofManifest.gitCommit.slice(0, 8)}</span>
+                </div>
+              )}
             </div>
           </div>
 
