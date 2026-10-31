@@ -214,7 +214,7 @@ Upon authentication, Vercel completes the remote build and yields the live produ
 
 ## Release Verification & Commit Hash
 - **GitHub Repository**: [https://github.com/khezzed/LexDrift](https://github.com/khezzed/LexDrift)
-- **Git Commit SHA**: `8f20aed1f0834490fde1ee5c96e10a204f96fd1e`
+- **Git Commit SHA**: `efae5c074d0db170dc1f59ae392c2bbe826a6cc7`
 - **Proof Manifest**: [`deploy/proof.json`](deploy/proof.json)
 - **Local Server**: `http://localhost:3000`
 - **GenLayer StudioNet Network**: Chain ID `61999` (RPC: `https://studio.genlayer.com/api`)

@@ -74,7 +74,7 @@ Live on StudioNet with 5 finalized proof scenarios, timeout rollbacks, and 100% 
 
 ### Release Integrity & Proof Manifest
 - **GitHub Repository**: [https://github.com/khezzed/LexDrift](https://github.com/khezzed/LexDrift)
-- **Git Commit SHA**: `8f20aed1f0834490fde1ee5c96e10a204f96fd1e`
+- **Git Commit SHA**: `efae5c074d0db170dc1f59ae392c2bbe826a6cc7`
 - **Proof Manifest**: `deploy/proof.json` & `frontend/lib/proofManifest.json`
 - **Local Server**: `http://localhost:3000` (Verified HTTP 200 on `/` and `/api/health`)
 
