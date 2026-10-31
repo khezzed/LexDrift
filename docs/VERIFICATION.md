@@ -1,6 +1,6 @@
 # LexDrift Verification & Reproducibility Guide
 
-> **Purpose**: Step-by-step guide for independent evaluators, hackathon judges, and portal reviewers to verify all unit tests, on-chain bytecode, and live StudioNet consensus receipts.
+> **Purpose**: Step-by-step guide to verify all unit tests, on-chain bytecode, and live StudioNet consensus receipts.
 
 ---
 
@@ -10,9 +10,7 @@ LexDrift contains an extensive direct test suite written in Python and Pytest th
 
 ### Run Command:
 ```bash
-# In project root:
-cd C:\Users\user\AntigravityProfiles\account1\.gemini\antigravity\scratch\lex-drift
-& ".\.venv\Scripts\pytest.exe" tests/direct -v
+pytest tests/direct -v
 ```
 
 ### Complete Test Matrix (18 Passed / 100%):

@@ -3,7 +3,6 @@
 > **Author**: LexDrift Engineering Team  
 > **Target Audience**: GenLayer Intelligent Contract developers, Web3 protocol architects, and autonomous governance researchers.  
 > **Prerequisites**: Familiarity with Python, basic EVM smart contract concepts, and the GenLayer Intelligent Contracts SDK (`py-genlayer`).  
-> **GenLayer Portal Category**: Tutorial / Technical Documentation (50–200 Points Eligible).
 
 ---
 

@@ -164,59 +164,29 @@ All 5 core architectural scenarios were executed against live StudioNet consensu
 
 ---
 
-## Setup, Local Verification & Reproduction Steps
+## Quickstart
 
-### 1. Prerequisites
-- Node.js $\ge 20.0.0$ and npm
-- Python $3.10+$ (with virtual environment or pytest)
-- Repository: `git clone https://github.com/khezzed/LexDrift.git && cd LexDrift`
-
-### 2. Direct & Stateful Unit Tests
-Run the comprehensive 18-test test suite covering all contract structures, domain logic, URL allowlists, substring quote checks, commit-reveal flows, and invariant protections:
 ```bash
-# In PowerShell:
-cd C:\Users\user\AntigravityProfiles\account1\.gemini\antigravity\scratch\lex-drift
-& ".\.venv\Scripts\pytest.exe" tests/direct -v
-```
-*Expected Result:* **18 passed in ~0.30s**.
-
-### 3. StudioNet Proof Manifest Verification
-Audit the live StudioNet deployment and all 5 scenarios directly via JSON-RPC using the automated verification script:
-```bash
-npm run verify:proof
-```
-The script performs three checks against StudioNet:
-1. Compares local contract source files against on-chain deployed bytecode SHA-256 hashes.
-2. Queries `get_accounting()` on `LexVault` to confirm that the conservation invariant holds on chain.
-3. Audits all 5 scenario transaction receipts, verifying consensus `FINALIZED` status and `execution_result == SUCCESS`.
-
-### 4. Running the Frontend Locally
-The interactive LexDrift dashboard visualizes active charters, allows interactive commit-reveal claim submission, live drift diff auditing, and one-click pull withdrawals:
-```bash
-cd frontend
+# 1. Install root dependencies
 npm install
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) in your browser (API health endpoint available at `http://localhost:3000/api/health`).
 
-### 5. Production Deployment (Vercel)
-The Next.js frontend is configured with `frontend/vercel.json` pre-populating all StudioNet environment variables (`NEXT_PUBLIC_*`).
-> [!NOTE]
-> On Windows, local `vercel build` fails due to symlink resolution. Always deploy using a remote build:
-```bash
-cd frontend
-npx vercel login
-npx vercel --prod --yes
+# 2. Verify live on-chain StudioNet deployment & proofs
+npm run verify:proof
+
+# 3. Run unit and stateful security test suite
+pytest tests/direct -v
+
+# 4. Launch local frontend dashboard
+cd frontend && npm install && npm run dev
 ```
-Upon authentication, Vercel completes the remote build and yields the live production `.vercel.app` deployment.
+
+Visit [http://localhost:3000](http://localhost:3000) to view the live dashboard and policy monitor (health endpoint: `/api/health`).
 
 ---
 
-## Release Verification & Commit Hash
+## Release Verification
 - **GitHub Repository**: [https://github.com/khezzed/LexDrift](https://github.com/khezzed/LexDrift)
-- **Git Commit SHA**: `efae5c074d0db170dc1f59ae392c2bbe826a6cc7`
 - **Proof Manifest**: [`deploy/proof.json`](deploy/proof.json)
-- **Local Server**: `http://localhost:3000`
 - **GenLayer StudioNet Network**: Chain ID `61999` (RPC: `https://studio.genlayer.com/api`)
 
 ---
@@ -264,14 +234,11 @@ In keeping with rigorous engineering standards, we document empirical findings a
 
 ## Documentation Directory
 
-- **[Step-by-Step Developer Tutorial](docs/TUTORIAL.md)**: Comprehensive 1,500+ word technical guide on building multi-contract comparative evidence sentinels on GenLayer.
-- **[Technical Blog Article](docs/BLOG_ARTICLE.md)**: *"Why Byte Diffs Aren't Enough: Auditing Retroactive License and Policy Drift with GenLayer Intelligent Contracts"*.
-- **[Two-Minute Demo Script](docs/DEMO_SCRIPT.md)**: Step-by-step presentation script for demoing the sentinel in under 120 seconds.
+- **[Step-by-Step Developer Tutorial](docs/TUTORIAL.md)**: Technical guide on building multi-contract comparative evidence sentinels on GenLayer.
 - **[System Architecture Reference](docs/ARCHITECTURE.md)**: Deep dive into state machines, commit-reveal queues, and inter-contract messaging.
-- **[Security Model & Formal Threat Analysis](docs/SECURITY.md)**: Threat modeling, prompt injection defense mechanisms, and STRIDE analysis.
+- **[Security Model & Formal Threat Analysis](docs/SECURITY.md)**: Threat modeling, prompt injection defense mechanisms, and invariant safety.
 - **[Deployment Ledger & Network Manifest](docs/DEPLOYMENT.md)**: Exact contract addresses, transaction hashes, and bytecode digests.
 - **[Verification Guide](docs/VERIFICATION.md)**: Instructions for running the test suite and inspecting on-chain receipts.
-- **[Portal Submission Fields](docs/PORTAL_SUBMISSION.md)**: Ready-to-copy fields formatted for the GenLayer Portal.
 
 ---
 

@@ -5,8 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "probe": "tsx deploy/probeSources.ts",
-    "test:direct": ".\\.venv\\Scripts\\pytest tests/direct -v",
+    "test:direct": "pytest tests/direct -v",
     "deploy:studionet": "tsx deploy/deployLexDrift.ts",
     "e2e:studionet": "tsx deploy/e2eLexDrift.ts",
     "verify:proof": "tsx deploy/verifyProof.ts"
