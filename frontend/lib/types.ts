@@ -122,6 +122,10 @@ export interface ProofScenario {
 export interface ProofManifest {
   projectName: string;
   tagline: string;
+  repository?: string;
+  githubUrl?: string;
+  source_commit?: string;
+  sourceCommit?: string;
   gitCommit?: string;
   commitSha?: string;
   network: {

@@ -5,7 +5,8 @@
 > **RPC Endpoint**: `https://studio.genlayer.com/api`  
 > **GenLayer Runner Hash**: `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6`  
 > **Deployer Address**: `0xc130A7a4C4F22b2644Eaa62F5D13F14c941860aC`  
-> **Deployment Timestamp**: `2026-10-30T21:56:44.440Z`
+> **Deployment Timestamp**: `2026-10-30T21:56:44.440Z`  
+> **GitHub Repository**: [`https://github.com/khezzed/LexDrift`](https://github.com/khezzed/LexDrift)
 
 ---
 
@@ -47,7 +48,9 @@ The two-phase bootstrap irreversibly bound `CharterGate` and `DriftAuditor` to `
 To deploy a fresh instance of LexDrift to StudioNet or localnet:
 
 ```bash
-# 1. Install dependencies
+# 1. Clone repository & install dependencies
+git clone https://github.com/khezzed/LexDrift.git
+cd LexDrift
 npm install
 
 # 2. Deploy all 3 contracts and execute two-phase bootstrap

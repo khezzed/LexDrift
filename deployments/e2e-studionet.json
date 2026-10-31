@@ -1,6 +1,8 @@
 {
   "projectName": "LexDrift",
   "tagline": "Real-time Multi-Snapshot Autonomous Legal & Governance Policy Drift Sentinel on GenLayer",
+  "repository": "https://github.com/khezzed/LexDrift",
+  "githubUrl": "https://github.com/khezzed/LexDrift",
   "gitCommit": "8f20aed1f0834490fde1ee5c96e10a204f96fd1e",
   "commitSha": "8f20aed1f0834490fde1ee5c96e10a204f96fd1e",
   "network": {

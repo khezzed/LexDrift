@@ -73,6 +73,7 @@ Live on StudioNet with 5 finalized proof scenarios, timeout rollbacks, and 100% 
 ---
 
 ### Release Integrity & Proof Manifest
+- **GitHub Repository**: [https://github.com/khezzed/LexDrift](https://github.com/khezzed/LexDrift)
 - **Git Commit SHA**: `8f20aed1f0834490fde1ee5c96e10a204f96fd1e`
 - **Proof Manifest**: `deploy/proof.json` & `frontend/lib/proofManifest.json`
 - **Local Server**: `http://localhost:3000` (Verified HTTP 200 on `/` and `/api/health`)
@@ -94,6 +95,8 @@ Live on StudioNet with 5 finalized proof scenarios, timeout rollbacks, and 100% 
 
 ### Verified Contract & Transaction Explorer Links
 
+- **GitHub Repository**:  
+  [`https://github.com/khezzed/LexDrift`](https://github.com/khezzed/LexDrift)
 - **LexVault (Deterministic Core)**:  
   [`0x270BBA964dB0C88363de6986Ef8D88090864456b`](https://explorer-studio.genlayer.com/address/0x270BBA964dB0C88363de6986Ef8D88090864456b)
 - **CharterGate (RuleGate Worker)**:  

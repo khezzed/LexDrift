@@ -1,4 +1,4 @@
-import { ExternalLink, ShieldCheck, Terminal, Database } from 'lucide-react';
+import { ExternalLink, ShieldCheck, Terminal, Database, Github } from 'lucide-react';
 import { LEX_VAULT_ADDRESS, CHARTER_GATE_ADDRESS, DRIFT_AUDITOR_ADDRESS, EXPLORER_URL } from '@/lib/constants';
 import proofManifest from '@/lib/proofManifest.json';
 
@@ -30,6 +30,17 @@ export function Footer() {
                   <span className="text-gold-400 font-mono">{proofManifest.gitCommit.slice(0, 8)}</span>
                 </div>
               )}
+              <div className="flex items-center space-x-1.5">
+                <Github className="h-3.5 w-3.5 text-gray-400" />
+                <a
+                  href="https://github.com/khezzed/LexDrift"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-gray-400 hover:text-gold-400 transition-colors"
+                >
+                  GitHub: khezzed/LexDrift
+                </a>
+              </div>
             </div>
           </div>
 
@@ -110,8 +121,18 @@ export function Footer() {
           <div>
             GenLayer Intelligent Contract Sentinel Benchmark • StudioNet Chain ID 61999
           </div>
-          <div>
-            Built with Next.js 15 App Router, TypeScript & Tailwind CSS
+          <div className="flex items-center space-x-3">
+            <a
+              href="https://github.com/khezzed/LexDrift"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center space-x-1 text-gray-400 hover:text-white transition-colors"
+            >
+              <Github className="h-3.5 w-3.5" />
+              <span>https://github.com/khezzed/LexDrift</span>
+            </a>
+            <span>•</span>
+            <span>Built with Next.js 15 App Router, TypeScript & Tailwind CSS</span>
           </div>
         </div>
       </div>

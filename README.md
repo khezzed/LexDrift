@@ -4,6 +4,7 @@
 > Automatically detects, adjudicates, and settles retroactive license changes, terms-of-service rugpulls, and governance charter drift using decentralized LLM validators and deterministic escrow accounting.
 
 [![StudioNet Deployed](https://img.shields.io/badge/StudioNet-61999-brightgreen.svg)](https://explorer-studio.genlayer.com/address/0x270BBA964dB0C88363de6986Ef8D88090864456b)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-khezzed%2FLexDrift-181717.svg?logo=github)](https://github.com/khezzed/LexDrift)
 [![GenLayer Contracts](https://img.shields.io/badge/GenLayer-py--genlayer-blue.svg)](https://docs.genlayer.com)
 [![Direct Tests](https://img.shields.io/badge/Tests-18%20Passed-success.svg)](tests/direct)
 [![Conservation Invariant](https://img.shields.io/badge/Accounting-Conserved%20100%25-orange.svg)](#financial-architecture--conservation-invariant)
@@ -168,6 +169,7 @@ All 5 core architectural scenarios were executed against live StudioNet consensu
 ### 1. Prerequisites
 - Node.js $\ge 20.0.0$ and npm
 - Python $3.10+$ (with virtual environment or pytest)
+- Repository: `git clone https://github.com/khezzed/LexDrift.git && cd LexDrift`
 
 ### 2. Direct & Stateful Unit Tests
 Run the comprehensive 18-test test suite covering all contract structures, domain logic, URL allowlists, substring quote checks, commit-reveal flows, and invariant protections:
@@ -211,6 +213,7 @@ Upon authentication, Vercel completes the remote build and yields the live produ
 ---
 
 ## Release Verification & Commit Hash
+- **GitHub Repository**: [https://github.com/khezzed/LexDrift](https://github.com/khezzed/LexDrift)
 - **Git Commit SHA**: `8f20aed1f0834490fde1ee5c96e10a204f96fd1e`
 - **Proof Manifest**: [`deploy/proof.json`](deploy/proof.json)
 - **Local Server**: `http://localhost:3000`
