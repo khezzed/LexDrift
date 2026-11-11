@@ -9,13 +9,22 @@ const ALLOWED_METHODS = new Set([
   'eth_getTransactionByHash',
   'eth_getTransactionReceipt',
   'eth_sendRawTransaction',
+  'eth_sendTransaction',
+  'eth_accounts',
+  'eth_requestAccounts',
+  'eth_getTransactionCount',
   'eth_blockNumber',
   'eth_call',
   'eth_estimateGas',
   'eth_gasPrice',
   'gen_call',
   'gen_getContractCode',
-  'gen_getTransactionStatus'
+  'gen_getContractSchema',
+  'gen_getContractSchemaForCode',
+  'gen_getTransactionStatus',
+  'gen_getTransactionReceipt',
+  'net_version',
+  'web3_clientVersion'
 ]);
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 3, backoffMs = 1000): Promise<Response> {

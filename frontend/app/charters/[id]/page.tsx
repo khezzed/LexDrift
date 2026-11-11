@@ -34,6 +34,13 @@ import {
 import { generateRandomSalt, computeCommitmentHash } from '@/lib/crypto';
 import { validateImmutableUrl } from '@/lib/urlValidator';
 import { addTrackedTransaction } from '@/lib/txTracker';
+import {
+  writeSealClaim,
+  writeDiscloseClaim,
+  connectStudioNetWallet,
+  getConnectedWallet,
+  readClaimCount
+} from '@/lib/genlayerClient';
 import proofManifest from '@/lib/proofManifest.json';
 
 // Static / recorded scenario metadata lookup for all 4 charters
@@ -200,6 +207,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [sealTxHash, setSealTxHash] = useState<string | null>(null);
   const [discloseTxHash, setDiscloseTxHash] = useState<string | null>(null);
+  const [sealedClaimId, setSealedClaimId] = useState<number | null>(null);
   const [isSealing, setIsSealing] = useState(false);
   const [isDisclosing, setIsDisclosing] = useState(false);
 
@@ -243,23 +251,55 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
 
     setIsSealing(true);
     try {
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
+
       const salt = claimSalt || generateRandomSalt(16);
       setClaimSalt(salt);
       const hash = await computeCommitmentHash(claimUrl, salt);
       setCommitmentHash(hash);
 
+      let currentClaimCount = 0;
+      try {
+        currentClaimCount = await readClaimCount();
+      } catch (countErr) {
+        console.warn('Could not read claim count, defaulting to charter claims length:', countErr);
+        currentClaimCount = charter.claims?.length || 0;
+      }
+      const targetClaimId = currentClaimCount + 1;
+      setSealedClaimId(targetClaimId);
+
       // Save to localStorage for Challenger Recovery
       const recoveryKey = `lexdrift_claim_recovery_${charterId}_${Date.now()}`;
-      localStorage.setItem(recoveryKey, JSON.stringify({ charterId, claimUrl, salt, commitmentHash: hash, sealedAt: Date.now() }));
+      localStorage.setItem(
+        recoveryKey,
+        JSON.stringify({
+          charterId,
+          claimId: targetClaimId,
+          claimUrl,
+          salt,
+          commitmentHash: hash,
+          sealedAt: Date.now()
+        })
+      );
 
-      await new Promise(r => setTimeout(r, 1000));
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-      addTrackedTransaction(pseudoHash, `seal_claim(charter #${charterId})`, { charterId, commitmentHash: hash, bondWei: 500 });
+      // Real write call to StudioNet LexVault
+      const txHash = await writeSealClaim(charterId, hash, 500n);
+      addTrackedTransaction(txHash, `seal_claim(charter #${charterId}, claim #${targetClaimId})`, {
+        charterId,
+        claimId: targetClaimId,
+        commitmentHash: hash,
+        bondWei: 500,
+        challenger: wallet
+      });
 
-      setSealTxHash(pseudoHash);
+      setSealTxHash(txHash);
       setActiveStep(2);
     } catch (err: any) {
-      alert(`Sealing failed: ${err.message}`);
+      console.error('Sealing failed:', err);
+      alert(`Sealing failed: ${err.message || err}`);
     } finally {
       setIsSealing(false);
     }
@@ -272,13 +312,27 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
 
     setIsDisclosing(true);
     try {
-      await new Promise(r => setTimeout(r, 1200));
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('')}`;
-      addTrackedTransaction(pseudoHash, `disclose_claim(charter #${charterId})`, { charterId, candidateUrl: claimUrl, salt: claimSalt });
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
 
-      setDiscloseTxHash(pseudoHash);
+      const targetClaimId = sealedClaimId || (charter.claims?.length ? charter.claims.length + 1 : 1);
+
+      // Real write call to StudioNet LexVault
+      const txHash = await writeDiscloseClaim(targetClaimId, claimUrl, claimSalt);
+      addTrackedTransaction(txHash, `disclose_claim(charter #${charterId}, claim #${targetClaimId})`, {
+        charterId,
+        claimId: targetClaimId,
+        candidateUrl: claimUrl,
+        salt: claimSalt,
+        challenger: wallet
+      });
+
+      setDiscloseTxHash(txHash);
     } catch (err: any) {
-      alert(`Disclosure failed: ${err.message}`);
+      console.error('Disclosure failed:', err);
+      alert(`Disclosure failed: ${err.message || err}`);
     } finally {
       setIsDisclosing(false);
     }
@@ -288,6 +342,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
   const handleDownloadRecovery = () => {
     const recoveryData = {
       charterId,
+      claimId: sealedClaimId,
       candidateUrl: claimUrl,
       salt: claimSalt,
       commitmentHash,
@@ -299,7 +354,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `lexdrift-recovery-charter-${charterId}.json`;
+    a.download = `lexdrift-recovery-charter-${charterId}-claim-${sealedClaimId || 'new'}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -695,8 +750,20 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
             <form onSubmit={handleDiscloseClaim} className="space-y-4">
               <div className="rounded-lg bg-emerald-950/20 border border-emerald-500/30 p-3 text-xs text-emerald-300 flex items-center justify-between">
                 <div>
-                  <span className="font-bold block">Claim Sealed Successfully!</span>
-                  <span className="font-mono text-[11px] text-gray-400">Tx: {sealTxHash || '0x...'}</span>
+                  <span className="font-bold block">Claim Sealed Successfully on StudioNet!</span>
+                  <div className="flex items-center space-x-1.5 font-mono text-[11px] text-gray-400">
+                    <span>Tx: {sealTxHash ? `${sealTxHash.slice(0, 12)}...${sealTxHash.slice(-8)}` : '0x...'}</span>
+                    {sealTxHash && (
+                      <a
+                        href={`${EXPLORER_URL}/tx/${sealTxHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-emerald-400 hover:text-white"
+                      >
+                        <ExternalLink className="h-3 w-3 inline" />
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -706,6 +773,23 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                   <Download className="h-3 w-3" />
                   <span>Recovery File</span>
                 </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">
+                  Claim ID to Disclose
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={sealedClaimId || 1}
+                  onChange={(e) => setSealedClaimId(Number(e.target.value))}
+                  required
+                  className="w-full rounded-lg border border-lex-700 bg-lex-950 px-3 py-2 text-xs font-mono text-white focus:border-gold-500 focus:outline-none"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Target claim ID on LexVault (auto-detected from seal transaction).
+                </p>
               </div>
 
               <div>
@@ -759,8 +843,17 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
               <p className="text-gray-300 text-[11px]">
                 DriftAuditor is executing leader verification and 6-boolean predicate checks across StudioNet validators.
               </p>
-              <div className="font-mono text-[11px] text-gray-400 truncate">
-                Tx: {discloseTxHash}
+              <div className="flex items-center space-x-1.5 font-mono text-[11px] text-cyan-300 bg-lex-950 p-2 rounded border border-cyan-900/60">
+                <span className="text-gray-500">Tx:</span>
+                <span className="truncate">{discloseTxHash}</span>
+                <a
+                  href={`${EXPLORER_URL}/tx/${discloseTxHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-gray-400 hover:text-white"
+                >
+                  <ExternalLink className="h-3 w-3 inline" />
+                </a>
               </div>
             </div>
           )}

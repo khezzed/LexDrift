@@ -18,6 +18,7 @@ import {
 import { validateImmutableUrl } from '@/lib/urlValidator';
 import { CHARTER_PRESETS, LEX_VAULT_ADDRESS, DEFAULT_REVIEWER_ADDRESS, EXPLORER_URL } from '@/lib/constants';
 import { addTrackedTransaction } from '@/lib/txTracker';
+import { writeOpenCharter, connectStudioNetWallet, getConnectedWallet } from '@/lib/genlayerClient';
 
 export default function NewCharterPage() {
   const [baselineUrl, setBaselineUrl] = useState('');
@@ -25,6 +26,7 @@ export default function NewCharterPage() {
   const [bountyWei, setBountyWei] = useState('1000');
   const [submitting, setSubmitting] = useState(false);
   const [submittedTx, setSubmittedTx] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Validate URL in real time
   const urlValidation = baselineUrl ? validateImmutableUrl(baselineUrl) : { valid: false };
@@ -41,26 +43,33 @@ export default function NewCharterPage() {
 
     setSubmitting(true);
     setSubmittedTx(null);
+    setErrorMsg(null);
 
     try {
-      // Reviewer Zero-Wallet submission simulation / live RPC call
-      // On GenLayer, write calls can be submitted via wallet or server proxy
-      await new Promise(r => setTimeout(r, 1200));
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
 
-      // Generate realistic StudioNet tx hash for tracker
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`;
+      const txHash = await writeOpenCharter(
+        baselineUrl,
+        covenantRule,
+        BigInt(bountyWei)
+      );
 
-      addTrackedTransaction(pseudoHash, `open_charter("${covenantRule.slice(0, 24)}...")`, {
+      addTrackedTransaction(txHash, `open_charter("${covenantRule.slice(0, 24)}...")`, {
         baselineUrl,
         bountyWei: Number(bountyWei),
-        covenantRule
+        covenantRule,
+        sponsor: wallet
       });
 
-      setSubmittedTx(pseudoHash);
+      setSubmittedTx(txHash);
     } catch (err: any) {
-      alert(`Submission error: ${err.message}`);
+      console.error('Charter open write error:', err);
+      const msg = err?.message || 'Transaction submission failed';
+      setErrorMsg(msg);
+      alert(`Submission error: ${msg}`);
     } finally {
       setSubmitting(false);
     }
@@ -201,17 +210,26 @@ export default function NewCharterPage() {
           </div>
         </div>
 
-        {/* Reviewer / Wallet Notice */}
+        {/* StudioNet Write Call Notice */}
         <div className="rounded-lg bg-lex-950/60 border border-lex-800 p-3 text-xs text-gray-400 flex items-start space-x-2">
           <HelpCircle className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
           <div>
-            <span className="text-gray-200 font-medium">Reviewer Zero-Wallet Experience:</span>
+            <span className="text-gray-200 font-medium">GenLayer StudioNet Write Call:</span>
             <p className="mt-0.5 text-[11px] leading-relaxed">
-              You can test submitting with the pre-configured reviewer account ({DEFAULT_REVIEWER_ADDRESS.slice(0, 8)}...).
-              The transaction will be sent to the StudioNet JSON-RPC proxy and tracked via the live appeal window tracker!
+              Submitting prompts your connected Web3 wallet (or auto-requests connection) to sign and broadcast the real <code className="text-gold-300">open_charter</code> write transaction to LexVault on StudioNet (Chain ID 61999).
             </p>
           </div>
         </div>
+
+        {errorMsg && (
+          <div className="rounded-lg bg-crimson-950/40 border border-crimson-500/40 p-3 text-xs text-crimson-300 flex items-start space-x-2">
+            <AlertCircle className="h-4 w-4 text-crimson-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold block">Submission Failed:</span>
+              <span className="text-[11px] text-gray-300">{errorMsg}</span>
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <div className="pt-2">

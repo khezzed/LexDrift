@@ -22,6 +22,15 @@ import {
   EXPLORER_URL
 } from '@/lib/constants';
 import { addTrackedTransaction } from '@/lib/txTracker';
+import {
+  writeRequestWithdrawal,
+  writeReconcileWithdrawal,
+  writeRecapitalizePayouts,
+  writeExpireStage,
+  readPullCredit,
+  connectStudioNetWallet,
+  getConnectedWallet
+} from '@/lib/genlayerClient';
 import proofManifest from '@/lib/proofManifest.json';
 
 export default function VaultPage() {
@@ -44,12 +53,23 @@ export default function VaultPage() {
 
   // Load live pull credit
   const loadAddressCredit = async (addr: string) => {
+    if (!addr || !addr.startsWith('0x')) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/health');
+      try {
+        const credit = await readPullCredit(addr);
+        setPullCredit(credit);
+        return;
+      } catch (clientErr) {
+        console.warn('Direct readContract credit error, falling back to health API:', clientErr);
+      }
+
+      const res = await fetch(`/api/health?address=${encodeURIComponent(addr)}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.liveState?.reviewerPullCredit !== undefined) {
+        if (data.liveState?.inspectedPullCredit !== undefined) {
+          setPullCredit(data.liveState.inspectedPullCredit);
+        } else if (data.liveState?.reviewerPullCredit !== undefined) {
           setPullCredit(data.liveState.reviewerPullCredit);
         }
       }
@@ -69,18 +89,24 @@ export default function VaultPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`;
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
 
-      addTrackedTransaction(pseudoHash, `request_withdrawal(${withdrawAmount} wei)`, {
-        amount: Number(withdrawAmount),
-        recipient: inspectAddress
+      const amountNum = Number(withdrawAmount);
+      const txHash = await writeRequestWithdrawal(amountNum);
+
+      addTrackedTransaction(txHash, `request_withdrawal(${withdrawAmount} wei)`, {
+        amount: amountNum,
+        recipient: wallet || inspectAddress
       });
-      setActionTx(pseudoHash);
+      setActionTx(txHash);
+
+      loadAddressCredit(inspectAddress);
     } catch (err: any) {
-      alert(`Withdrawal request failed: ${err.message}`);
+      console.error('Withdrawal request failed:', err);
+      alert(`Withdrawal request failed: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -91,19 +117,26 @@ export default function VaultPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`;
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
 
-      addTrackedTransaction(pseudoHash, `reconcile_withdrawal(#${widToReconcile})`, {
-        withdrawalId: Number(widToReconcile),
+      const widNum = Number(widToReconcile);
+      const txHash = await writeReconcileWithdrawal(widNum, parentTx, childTx);
+
+      addTrackedTransaction(txHash, `reconcile_withdrawal(#${widToReconcile})`, {
+        withdrawalId: widNum,
         parentTx,
-        childTx
+        childTx,
+        caller: wallet
       });
-      setActionTx(pseudoHash);
+      setActionTx(txHash);
+
+      loadAddressCredit(inspectAddress);
     } catch (err: any) {
-      alert(`Reconciliation failed: ${err.message}`);
+      console.error('Reconciliation failed:', err);
+      alert(`Reconciliation failed: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -113,15 +146,24 @@ export default function VaultPage() {
   const handleRecapitalize = async () => {
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`;
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
 
-      addTrackedTransaction(pseudoHash, 'recapitalize_payouts()', {});
-      setActionTx(pseudoHash);
+      const recapitalizeWei = 1000n;
+      const txHash = await writeRecapitalizePayouts(recapitalizeWei);
+
+      addTrackedTransaction(txHash, 'recapitalize_payouts(1000 wei)', {
+        amount: Number(recapitalizeWei),
+        caller: wallet
+      });
+      setActionTx(txHash);
+
+      loadAddressCredit(inspectAddress);
     } catch (err: any) {
-      alert(`Recapitalization failed: ${err.message}`);
+      console.error('Recapitalization failed:', err);
+      alert(`Recapitalization failed: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -132,18 +174,25 @@ export default function VaultPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      const pseudoHash = `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`;
+      let wallet = await getConnectedWallet();
+      if (!wallet) {
+        wallet = await connectStudioNetWallet();
+      }
 
-      addTrackedTransaction(pseudoHash, `expire_stage(${expireType}, #${expireId})`, {
+      const targetIdNum = Number(expireId);
+      const txHash = await writeExpireStage(expireType, targetIdNum);
+
+      addTrackedTransaction(txHash, `expire_stage(${expireType}, #${expireId})`, {
         targetType: expireType,
-        targetId: Number(expireId)
+        targetId: targetIdNum,
+        caller: wallet
       });
-      setActionTx(pseudoHash);
+      setActionTx(txHash);
+
+      loadAddressCredit(inspectAddress);
     } catch (err: any) {
-      alert(`Stage timeout expiration failed: ${err.message}`);
+      console.error('Stage timeout expiration failed:', err);
+      alert(`Stage timeout expiration failed: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -368,10 +417,19 @@ export default function VaultPage() {
 
       {/* Action Transaction Hash Alert */}
       {actionTx && (
-        <div className="rounded-lg bg-emerald-950/30 border border-emerald-500/40 p-4 space-y-1 text-xs">
+        <div className="rounded-lg bg-emerald-950/30 border border-emerald-500/40 p-4 space-y-2 text-xs">
           <span className="font-semibold text-emerald-300 block">Transaction Broadcast to StudioNet!</span>
-          <div className="font-mono text-[11px] text-gray-300 truncate">
-            Tx Hash: {actionTx}
+          <div className="flex items-center space-x-1.5 font-mono text-[11px] text-gray-300 bg-lex-950 p-2 rounded border border-emerald-900/60">
+            <span className="text-gray-500">Tx Hash:</span>
+            <span className="truncate text-emerald-300">{actionTx}</span>
+            <a
+              href={`${EXPLORER_URL}/tx/${actionTx}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-gray-400 hover:text-white"
+            >
+              <ExternalLink className="h-3 w-3 inline" />
+            </a>
           </div>
         </div>
       )}

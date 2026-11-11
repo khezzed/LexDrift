@@ -1,9 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldAlert, BookOpen, PlusCircle, Wallet, LayoutDashboard, ExternalLink, Activity, Github } from 'lucide-react';
+import { ShieldAlert, BookOpen, PlusCircle, Wallet, LayoutDashboard, ExternalLink, Activity, Github, CheckCircle2 } from 'lucide-react';
 import { LEX_VAULT_ADDRESS, DEFAULT_REVIEWER_ADDRESS, EXPLORER_URL } from '@/lib/constants';
+import { connectStudioNetWallet, getConnectedWallet, getEthereumProvider } from '@/lib/genlayerClient';
 
 interface NavbarProps {
   dataSource?: 'live' | 'proof';
@@ -12,6 +14,53 @@ interface NavbarProps {
 
 export function Navbar({ dataSource = 'live', onToggleDataSource }: NavbarProps) {
   const pathname = usePathname();
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  useEffect(() => {
+    // Check initial connection
+    getConnectedWallet().then((addr) => {
+      if (addr) setWalletAddress(addr);
+    });
+
+    const provider = getEthereumProvider();
+    if (provider && provider.on) {
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts && accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+        } else {
+          setWalletAddress(null);
+        }
+      };
+
+      const handleChainChanged = () => {
+        getConnectedWallet().then(setWalletAddress);
+      };
+
+      provider.on('accountsChanged', handleAccountsChanged);
+      provider.on('chainChanged', handleChainChanged);
+
+      return () => {
+        if (provider.removeListener) {
+          provider.removeListener('accountsChanged', handleAccountsChanged);
+          provider.removeListener('chainChanged', handleChainChanged);
+        }
+      };
+    }
+  }, []);
+
+  const handleConnectWallet = async () => {
+    setIsConnecting(true);
+    try {
+      const account = await connectStudioNetWallet();
+      setWalletAddress(account);
+    } catch (err: any) {
+      console.warn('Wallet connection cancelled or failed:', err.message);
+      alert(err.message || 'Failed to connect wallet');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -83,8 +132,31 @@ export function Navbar({ dataSource = 'live', onToggleDataSource }: NavbarProps)
             <span className="font-mono">StudioNet:61999</span>
           </div>
 
-          {/* Reviewer Zero-Wallet Indicator */}
-          <div className="flex items-center space-x-1.5 rounded-md bg-lex-900 border border-gold-500/30 px-2.5 py-1 text-xs">
+          {/* Real Browser Wallet Connection */}
+          {walletAddress ? (
+            <div
+              className="flex items-center space-x-1.5 rounded-md bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 text-xs"
+              title={`Connected: ${walletAddress} (StudioNet 61999)`}
+            >
+              <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+              <span className="text-[10px] uppercase font-bold text-emerald-400">Connected:</span>
+              <span className="font-mono text-emerald-200 text-[11px]">
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={handleConnectWallet}
+              disabled={isConnecting}
+              className="flex items-center space-x-1.5 rounded-md bg-gold-500/20 border border-gold-500/50 px-2.5 py-1 text-xs font-semibold text-gold-300 hover:bg-gold-500/30 transition-colors shadow-sm"
+            >
+              <Wallet className="h-3.5 w-3.5 text-gold-400" />
+              <span>{isConnecting ? 'Connecting...' : 'Connect Wallet'}</span>
+            </button>
+          )}
+
+          {/* Reviewer Account Reference */}
+          <div className="hidden sm:flex items-center space-x-1.5 rounded-md bg-lex-900 border border-gold-500/30 px-2.5 py-1 text-xs">
             <span className="text-[10px] uppercase font-bold tracking-wider text-gold-400">Reviewer:</span>
             <span className="font-mono text-gray-300 text-[11px]">
               {DEFAULT_REVIEWER_ADDRESS.slice(0, 6)}...{DEFAULT_REVIEWER_ADDRESS.slice(-4)}

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Clock, ShieldCheck, AlertCircle, CheckCircle2, ArrowRight, ExternalLink, RefreshCw, XCircle } from 'lucide-react';
 import { TrackedTx, TxStepState } from '@/lib/types';
-import { getTrackedTransactions, saveTrackedTransactions } from '@/lib/txTracker';
+import { getTrackedTransactions, saveTrackedTransactions, updateTrackedTransaction } from '@/lib/txTracker';
+import { getTransactionStatusOnChain } from '@/lib/genlayerClient';
 import { EXPLORER_URL } from '@/lib/constants';
 
 const STEPS: { key: TxStepState; label: string; desc: string }[] = [
@@ -19,11 +20,78 @@ export function TxAppealTracker() {
 
   useEffect(() => {
     setTrackedTxs(getTrackedTransactions());
-    const interval = setInterval(() => {
+
+    // 1. Tick timer every 1s for appeal countdown
+    const tickInterval = setInterval(() => {
       setNow(Date.now());
       setTrackedTxs(getTrackedTransactions());
-    }, 2000);
-    return () => clearInterval(interval);
+    }, 1000);
+
+    // 2. Poll real on-chain transaction status via StudioNet RPC every 6s
+    const pollOnChainStatus = async () => {
+      const currentTxs = getTrackedTransactions();
+      const active = currentTxs.filter(
+        (t) => t.step !== 'finalized-success' && t.step !== 'finalized-error'
+      );
+      if (active.length === 0) return;
+
+      for (const tx of active) {
+        try {
+          const res = await getTransactionStatusOnChain(tx.hash);
+          if (!res || !res.status) continue;
+
+          const status = res.status.toUpperCase();
+          const resultName = (res.resultName || '').toUpperCase();
+
+          let nextStep: TxStepState = tx.step;
+          if (
+            status === 'PENDING' ||
+            status === 'ACTIVATED' ||
+            status === 'PROPOSING' ||
+            status === 'COMMITTING' ||
+            status === 'REVEALING'
+          ) {
+            nextStep = 'pending';
+          } else if (
+            status === 'ACCEPTED' ||
+            status === 'APPEAL_REVEALING' ||
+            status === 'APPEAL_COMMITTING'
+          ) {
+            nextStep = 'accepted';
+          } else if (status === 'FINALIZED') {
+            if (
+              resultName === 'ERROR' ||
+              resultName === 'CANCELED' ||
+              res.raw?.result === 0 ||
+              resultName.includes('FAIL')
+            ) {
+              nextStep = 'finalized-error';
+            } else {
+              nextStep = 'finalized-success';
+            }
+          } else if (status === 'CANCELED') {
+            nextStep = 'finalized-error';
+          }
+
+          if (nextStep !== tx.step) {
+            updateTrackedTransaction(tx.hash, nextStep, {
+              error: nextStep === 'finalized-error' ? (resultName || 'Transaction execution failed') : undefined,
+            });
+          }
+        } catch (err) {
+          console.warn(`Error polling status for tx ${tx.hash}:`, err);
+        }
+      }
+      setTrackedTxs(getTrackedTransactions());
+    };
+
+    pollOnChainStatus();
+    const pollInterval = setInterval(pollOnChainStatus, 6000);
+
+    return () => {
+      clearInterval(tickInterval);
+      clearInterval(pollInterval);
+    };
   }, []);
 
   if (trackedTxs.length === 0) {

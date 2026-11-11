@@ -23,17 +23,20 @@ import proofManifest from '@/lib/proofManifest.json';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(req: Request) {
   const startedAt = Date.now();
+  const { searchParams } = new URL(req.url);
+  const customAddress = searchParams.get('address');
 
   try {
     // 1. Fetch live accounting & config in parallel
-    const [accounting, config, charterCount, claimCount, reviewerCredit] = await Promise.all([
+    const [accounting, config, charterCount, claimCount, reviewerCredit, customAddressCredit] = await Promise.all([
       fetchLiveVaultAccounting(),
       fetchLiveVaultConfig(),
       fetchLiveCharterCount(),
       fetchLiveClaimCount(),
-      fetchLivePullCredit(DEFAULT_REVIEWER_ADDRESS)
+      fetchLivePullCredit(DEFAULT_REVIEWER_ADDRESS),
+      customAddress ? fetchLivePullCredit(customAddress) : Promise.resolve(null)
     ]);
 
     // 2. Fetch charters & attestations
@@ -103,6 +106,7 @@ export async function GET() {
         charterCount,
         claimCount,
         reviewerPullCredit: reviewerCredit,
+        inspectedPullCredit: customAddressCredit !== null ? customAddressCredit : reviewerCredit,
         charters,
         claims
       },
