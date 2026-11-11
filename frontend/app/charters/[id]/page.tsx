@@ -47,9 +47,9 @@ import proofManifest from '@/lib/proofManifest.json';
 const CHARTER_DATA_MAP: Record<number, any> = {
   1: {
     id: 1,
-    title: 'Terraform Community Ethics (Vague Covenant Rejection)',
-    baseline_url: 'https://raw.githubusercontent.com/hashicorp/terraform/v1.5.5/LICENSE',
-    covenant_rule: 'The maintainers will always act ethically and in good faith toward community contributors.',
+    title: 'Express.js Vague Covenant (Rejected by CharterGate)',
+    baseline_url: 'https://raw.githubusercontent.com/expressjs/express/8368dc178af16b91b576c4c1d135f701a0007e5d/Readme.md',
+    covenant_rule: 'Keep the framework fast, modern, and developer-friendly at all times.',
     bounty: 0,
     status: 'REJECTED_CHARTER',
     sponsor: DEFAULT_REVIEWER_ADDRESS,
@@ -58,10 +58,10 @@ const CHARTER_DATA_MAP: Record<number, any> = {
       observable_criterion: false,
       specific_scope: false,
       falsifiable_condition: false,
-      baseline_entails_guarantee: true,
+      baseline_entails_guarantee: false,
       admissible: false,
-      baseline_quote: 'TERRAFORM SOURCE CODE LICENSE',
-      baseline_digest: '76efab36bbd714c2e606598317ae3005de757a5862f149f8b668f31147b6ba72',
+      baseline_quote: '',
+      baseline_digest: 'ecc5f634fdff86958b5eee8030c09cd3b2fbf18aefa34c1273260e09bdc10aec',
       reason: 'Vague aspirational language without observable criteria'
     },
     claims: []
@@ -69,8 +69,8 @@ const CHARTER_DATA_MAP: Record<number, any> = {
   2: {
     id: 2,
     title: 'Express.js MIT License Protection Charter',
-    baseline_url: 'https://raw.githubusercontent.com/expressjs/express/4.18.2/Readme.md',
-    covenant_rule: 'The project must maintain its MIT license terms granting unconditional permission to use, copy, modify, merge, publish, distribute, sublicense, and sell.',
+    baseline_url: 'https://raw.githubusercontent.com/expressjs/express/8368dc178af16b91b576c4c1d135f701a0007e5d/Readme.md',
+    covenant_rule: 'The project README must explicitly maintain the MIT License grant under the License section without adding commercial usage restrictions.',
     bounty: 1500,
     status: 'ACTIVE',
     sponsor: DEFAULT_REVIEWER_ADDRESS,
@@ -89,7 +89,7 @@ const CHARTER_DATA_MAP: Record<number, any> = {
       {
         claim_id: 1,
         challenger: '0xc130A7a4C4F22b2644Eaa62F5D13F14c941860aC',
-        candidate_url: 'https://raw.githubusercontent.com/expressjs/express/4.19.1/Readme.md',
+        candidate_url: 'https://raw.githubusercontent.com/expressjs/express/4f0f6cc67d531431c096ea006c2191b92931bbc3/Readme.md',
         bond: 500,
         status: 'REJECTED_BENIGN_REVISION',
         verdict: 'BENIGN_REVISION',
@@ -103,13 +103,13 @@ const CHARTER_DATA_MAP: Record<number, any> = {
           materially_adverse_shift: false,
           not_carved_out: true,
           candidate_quote: '## License\n\n  [MIT](LICENSE)',
-          explanation: 'Benign security patch bump preserving MIT license grant without alteration'
+          explanation: 'Benign protocol URL update preserving MIT license grant without alteration'
         }
       },
       {
         claim_id: 2,
         challenger: '0xc130A7a4C4F22b2644Eaa62F5D13F14c941860aC',
-        candidate_url: 'https://raw.githubusercontent.com/minimaxir/big-list-of-naughty-strings/master/blns.base64.txt',
+        candidate_url: 'https://raw.githubusercontent.com/minimaxir/big-list-of-naughty-strings/db33ec7b1d5d9616a88c76394b7d0897bd0b97eb/README.md',
         bond: 500,
         status: 'REJECTED_EVIDENCE',
         verdict: 'REJECTED_EVIDENCE',
@@ -131,8 +131,8 @@ const CHARTER_DATA_MAP: Record<number, any> = {
   3: {
     id: 3,
     title: 'Terraform v1.5.5 MPL-2.0 License Charter',
-    baseline_url: 'https://raw.githubusercontent.com/hashicorp/terraform/v1.5.5/LICENSE',
-    covenant_rule: 'The software must remain licensed under Mozilla Public License v2.0 without production commercial use restrictions or source-available clauses.',
+    baseline_url: 'https://raw.githubusercontent.com/hashicorp/terraform/c10eb21b390627a6259eef9cd883e6ddeccc5716/LICENSE',
+    covenant_rule: 'The software repository LICENSE must remain under the Mozilla Public License 2.0 (MPL-2.0) and must not transition to a Business Source License (BSL) or prohibit competitive commercial offerings.',
     bounty: 0,
     status: 'SETTLED_DRIFT',
     sponsor: DEFAULT_REVIEWER_ADDRESS,
@@ -151,7 +151,7 @@ const CHARTER_DATA_MAP: Record<number, any> = {
       {
         claim_id: 3,
         challenger: '0xc130A7a4C4F22b2644Eaa62F5D13F14c941860aC',
-        candidate_url: 'https://raw.githubusercontent.com/hashicorp/terraform/v1.6.0/LICENSE',
+        candidate_url: 'https://raw.githubusercontent.com/hashicorp/terraform/edb8ea4baa43421a73d7ba50fed957e6be599b45/LICENSE',
         bond: 500,
         status: 'SETTLED_MATERIAL_DRIFT',
         verdict: 'MATERIAL_DRIFT',
@@ -173,7 +173,7 @@ const CHARTER_DATA_MAP: Record<number, any> = {
   4: {
     id: 4,
     title: 'Timed Express Charter (Timeout Recovery Test)',
-    baseline_url: 'https://raw.githubusercontent.com/expressjs/express/4.18.2/Readme.md',
+    baseline_url: 'https://raw.githubusercontent.com/expressjs/express/8368dc178af16b91b576c4c1d135f701a0007e5d/Readme.md',
     covenant_rule: 'Testing stage deadline expiration and deposit rollback in LexVault.',
     bounty: 0,
     status: 'EXPIRED_UNATTESTED',
@@ -222,6 +222,10 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
           if (liveCharter && liveCharter.data) {
             setCharter((prev: any) => ({
               ...prev,
+              id: charterId,
+              title: CHARTER_DATA_MAP[charterId]?.title || `Protected Governance Charter #${charterId}`,
+              baseline_url: liveCharter.data.baseline_url || prev.baseline_url,
+              covenant_rule: liveCharter.data.covenant_rule || prev.covenant_rule,
               status: liveCharter.data.status || prev.status,
               bounty: liveCharter.data.bounty !== undefined ? liveCharter.data.bounty : prev.bounty,
               sponsor: liveCharter.data.sponsor || prev.sponsor,
@@ -685,7 +689,7 @@ export default function CharterDetailPage({ params }: { params: Promise<{ id: st
                     setClaimUrl(e.target.value);
                     if (claimSalt) computeCommitmentHash(e.target.value, claimSalt).then(setCommitmentHash);
                   }}
-                  placeholder="https://raw.githubusercontent.com/hashicorp/terraform/v1.6.0/LICENSE"
+                  placeholder="https://raw.githubusercontent.com/hashicorp/terraform/edb8ea4baa43421a73d7ba50fed957e6be599b45/LICENSE"
                   required
                   className="w-full rounded-lg border border-lex-700 bg-lex-950 px-3 py-2 text-xs font-mono text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
                 />

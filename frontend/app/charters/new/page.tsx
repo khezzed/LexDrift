@@ -130,13 +130,13 @@ export default function NewCharterPage() {
             Immutable Baseline Snapshot URL ($T_0$)
           </label>
           <p className="text-[11px] text-gray-400 mb-2">
-            Must be an immutable pinned URL: GitHub commit (40-hex SHA or release tag), Wikipedia immutable oldid, or Wayback raw snapshot.
+            Must be an immutable pinned URL: GitHub commit (40-hex SHA), Wikipedia Action API oldid, or Wayback raw id_ snapshot.
           </p>
           <input
             type="url"
             value={baselineUrl}
             onChange={(e) => setBaselineUrl(e.target.value)}
-            placeholder="https://raw.githubusercontent.com/hashicorp/terraform/v1.5.5/LICENSE"
+            placeholder="https://raw.githubusercontent.com/hashicorp/terraform/c10eb21b390627a6259eef9cd883e6ddeccc5716/LICENSE"
             required
             className="w-full rounded-lg border border-lex-700 bg-lex-950 px-3 py-2 text-xs font-mono text-white placeholder-gray-600 focus:border-gold-500 focus:outline-none"
           />
