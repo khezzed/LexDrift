@@ -3,7 +3,119 @@ from genlayer import *
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime
+
+STUDIONET_RPC_URL = "https://studio.genlayer.com/api"
+
+
+def _is_valid_tx_hash(tx_hash: str) -> bool:
+    if not tx_hash or not isinstance(tx_hash, str):
+        return False
+    return bool(re.match(r'^0x[0-9a-fA-F]{64}$', tx_hash.strip()))
+
+
+def _fetch_rpc_tx(rpc_url: str, tx_hash: str) -> dict:
+    payload = json.dumps({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "eth_getTransactionByHash",
+        "params": [tx_hash]
+    })
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    resp = gl.nondet.web.post(rpc_url, body=payload, headers=headers)
+    body = getattr(resp, "body", b"")
+    if isinstance(body, bytes):
+        text = body.decode("utf-8", errors="replace")
+    else:
+        text = str(body)
+    data = _parse_json_safely(text)
+    res = data.get("result")
+    return res if isinstance(res, dict) else {}
+
+
+def _parse_tx_value(raw_val) -> int:
+    if isinstance(raw_val, bool) or raw_val is None:
+        return -1
+    if isinstance(raw_val, (int, float)):
+        return int(raw_val)
+    s = str(raw_val).strip()
+    if not s:
+        return -1
+    try:
+        return int(s, 16) if s.startswith("0x") else int(s)
+    except Exception:
+        return -1
+
+
+def _verify_transfer_finality_nondet(
+    vault_addr: str,
+    recipient: str,
+    expected_amount: int,
+    parent_tx_hash: str,
+    child_tx_hash: str
+) -> dict:
+    p_hash = parent_tx_hash.strip().lower()
+    c_hash = child_tx_hash.strip().lower()
+    v_addr = vault_addr.strip().lower()
+    r_addr = recipient.strip().lower()
+
+    parent_tx = _fetch_rpc_tx(STUDIONET_RPC_URL, p_hash)
+    child_tx = _fetch_rpc_tx(STUDIONET_RPC_URL, c_hash)
+
+    p_status = str(parent_tx.get("statusName") or parent_tx.get("status") or "").upper()
+    c_status = str(child_tx.get("statusName") or child_tx.get("status") or "").upper()
+    parent_finalized = p_status in ("FINALIZED", "7")
+    child_finalized = c_status in ("FINALIZED", "7")
+
+    p_from = str(parent_tx.get("from_address") or parent_tx.get("from") or "").lower()
+    p_to = str(parent_tx.get("to_address") or parent_tx.get("to") or "").lower()
+    p_result = str(parent_tx.get("result_name") or "").upper()
+    p_exec = str(parent_tx.get("execution_result") or "").upper()
+    parent_sender_ok = p_from == r_addr
+    parent_target_ok = p_to == v_addr
+    parent_not_failed = p_result not in ("ERROR", "CANCELED", "FAILED") and p_exec != "ERROR"
+
+    c_triggered_by = str(child_tx.get("triggered_by") or "").lower()
+    c_from = str(child_tx.get("from_address") or child_tx.get("from") or "").lower()
+    c_to = str(child_tx.get("to_address") or child_tx.get("to") or "").lower()
+    c_val = _parse_tx_value(child_tx.get("value"))
+    c_credited = child_tx.get("value_credited") is True
+    c_result = str(child_tx.get("result_name") or "").upper()
+    c_exec = str(child_tx.get("execution_result") or "").upper()
+
+    child_triggered_ok = c_triggered_by == p_hash
+    child_from_ok = c_from == v_addr
+    child_to_ok = c_to == r_addr
+    child_value_ok = c_val == expected_amount and expected_amount > 0
+    child_not_failed = c_result not in ("ERROR", "CANCELED", "FAILED") and c_exec != "ERROR"
+
+    verified = bool(
+        parent_tx
+        and child_tx
+        and parent_finalized
+        and child_finalized
+        and parent_sender_ok
+        and parent_target_ok
+        and parent_not_failed
+        and child_triggered_ok
+        and child_from_ok
+        and child_to_ok
+        and child_value_ok
+        and c_credited
+        and child_not_failed
+    )
+
+    return {
+        "verified": verified,
+        "parent_tx_hash": p_hash,
+        "child_tx_hash": c_hash,
+        "recipient": r_addr,
+        "vault": v_addr,
+        "amount": expected_amount,
+    }
 
 
 def _is_valid_immutable_url(url: str) -> bool:
@@ -42,6 +154,17 @@ def _parse_json_safely(raw_val) -> dict:
         return {}
 
 
+@gl.evm.contract_interface
+class _EvmRecipient:
+    """Verified EVM/EOA transfer interface emitting EthSend on GenLayer."""
+
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
 class LexVault(gl.Contract):
     """
     LexVault: Deterministic Economic Core of the LexDrift Sentinel.
@@ -60,12 +183,12 @@ class LexVault(gl.Contract):
     commitments: TreeMap[str, u256]
     pull_credits: TreeMap[str, u256]
     pending_outbound: TreeMap[u256, str]
+    consumed_payout_receipts: TreeMap[str, u256]
     total_escrow: u256
     total_credits: u256
     total_pending_outbound: u256
     total_value_locked: u256
     stage_timeout_seconds: u256
-    time_offset: u256
 
     def __init__(self):
         super().__init__()
@@ -80,7 +203,6 @@ class LexVault(gl.Contract):
         self.total_pending_outbound = u256(0)
         self.total_value_locked = u256(0)
         self.stage_timeout_seconds = u256(1800)
-        self.time_offset = u256(0)
 
     # =========================================================================
     # Internal Helpers
@@ -89,18 +211,32 @@ class LexVault(gl.Contract):
     def _now(self) -> int:
         raw = getattr(gl, "message_raw", None)
         base_ts = 0
-        if raw and isinstance(raw, dict) and "datetime" in raw:
+        if raw and isinstance(raw, dict) and "datetime" in raw and raw["datetime"] is not None:
             dt_raw = raw["datetime"]
+            if isinstance(dt_raw, bool):
+                raise gl.vm.UserError("UNAVAILABLE_TRUSTED_TIME: Trusted GenVM message timestamp is invalid")
             if isinstance(dt_raw, (int, float)):
                 base_ts = int(dt_raw)
             else:
-                dt_str = str(dt_raw).replace("Z", "+00:00")
-                base_ts = int(datetime.fromisoformat(dt_str).timestamp())
-        elif hasattr(gl.message, "timestamp") and gl.message.timestamp:
-            base_ts = int(gl.message.timestamp)
-        else:
-            base_ts = int(datetime.now(timezone.utc).timestamp())
-        return base_ts + int(self.time_offset)
+                dt_str = str(dt_raw).strip()
+                if not dt_str:
+                    raise gl.vm.UserError("UNAVAILABLE_TRUSTED_TIME: Trusted GenVM message timestamp is missing")
+                try:
+                    base_ts = int(datetime.fromisoformat(dt_str.replace("Z", "+00:00")).timestamp())
+                except Exception:
+                    raise gl.vm.UserError("UNAVAILABLE_TRUSTED_TIME: Unparseable trusted GenVM message timestamp")
+        elif hasattr(gl.message, "timestamp") and gl.message.timestamp is not None:
+            ts_raw = gl.message.timestamp
+            if isinstance(ts_raw, bool):
+                raise gl.vm.UserError("UNAVAILABLE_TRUSTED_TIME: Trusted GenVM message timestamp is invalid")
+            try:
+                base_ts = int(ts_raw)
+            except Exception:
+                raise gl.vm.UserError("UNAVAILABLE_TRUSTED_TIME: Unparseable trusted GenVM message timestamp")
+
+        if base_ts <= 0:
+            raise gl.vm.UserError("UNAVAILABLE_TRUSTED_TIME: Trusted GenVM message timestamp is missing or invalid")
+        return base_ts
 
     def _assert_invariant(self) -> None:
         escrow = int(self.total_escrow)
@@ -513,15 +649,15 @@ class LexVault(gl.Contract):
         self.pending_outbound[u256(wid)] = json.dumps(record)
         self._assert_invariant()
 
-        gl.get_contract_at(Address(sender)).emit_transfer(value=u256(amount), on="finalized")
+        _EvmRecipient(Address(sender)).emit_transfer(value=u256(amount), on="finalized")
         return u256(wid)
 
     @gl.public.write
     def reconcile_withdrawal(self, withdrawal_id: int, parent_tx_hash: str, child_tx_hash: str) -> None:
         """
         Step 2 of Native EVM Pull Payment:
-        Reconciles outbound transfer with cross-chain parent and child transaction hashes.
-        Deducts from pending_outbound and total_value_locked.
+        Authorizes the withdrawal recipient and validates authenticated transfer-finality
+        evidence via validator consensus replay before reconciling outbound funds.
         """
         raw_rec = self.pending_outbound.get(u256(withdrawal_id), "")
         if not raw_rec:
@@ -531,13 +667,61 @@ class LexVault(gl.Contract):
         if rec.get("status") != "PENDING":
             raise gl.vm.UserError(f"WITHDRAWAL_NOT_PENDING: Status is {rec.get('status')}")
 
+        recipient = str(rec.get("recipient", ""))
+        caller = str(gl.message.sender_address)
+        if not recipient or caller.lower() != recipient.lower():
+            raise gl.vm.UserError("UNAUTHORIZED_RECONCILER: Only the withdrawal recipient may reconcile")
+
+        if not _is_valid_tx_hash(parent_tx_hash) or not _is_valid_tx_hash(child_tx_hash):
+            raise gl.vm.UserError("INVALID_TRANSFER_FINALITY_EVIDENCE: Expected 32-byte 0x hex transaction hashes")
+
+        p_hash = parent_tx_hash.strip().lower()
+        c_hash = child_tx_hash.strip().lower()
+        if p_hash == c_hash:
+            raise gl.vm.UserError("INVALID_TRANSFER_FINALITY_EVIDENCE: Parent and child hashes must be distinct")
+
+        if p_hash in self.consumed_payout_receipts or c_hash in self.consumed_payout_receipts:
+            raise gl.vm.UserError("RECEIPT_ALREADY_CONSUMED: Transfer finality receipt already reconciled")
+
         amt = int(rec.get("amount", 0))
+        vault_addr = str(gl.message.contract_address)
+
+        def leader_fn() -> dict:
+            return _verify_transfer_finality_nondet(
+                vault_addr, recipient, amt, p_hash, c_hash
+            )
+
+        def validator_fn(leaders_res) -> bool:
+            if not isinstance(leaders_res, gl.vm.Return):
+                return False
+            leader_out = leaders_res.calldata
+            if not isinstance(leader_out, dict):
+                return False
+            val_out = _verify_transfer_finality_nondet(
+                vault_addr, recipient, amt, p_hash, c_hash
+            )
+            return (
+                leader_out.get("verified") == val_out.get("verified")
+                and leader_out.get("parent_tx_hash") == val_out.get("parent_tx_hash")
+                and leader_out.get("child_tx_hash") == val_out.get("child_tx_hash")
+                and leader_out.get("recipient") == val_out.get("recipient")
+                and leader_out.get("vault") == val_out.get("vault")
+                and leader_out.get("amount") == val_out.get("amount")
+            )
+
+        proof = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        if not isinstance(proof, dict) or not proof.get("verified"):
+            raise gl.vm.UserError("INVALID_TRANSFER_FINALITY_EVIDENCE: Unverified or unfinalized transfer receipt")
+
+        self.consumed_payout_receipts[p_hash] = u256(withdrawal_id)
+        self.consumed_payout_receipts[c_hash] = u256(withdrawal_id)
+
         self.total_pending_outbound = u256(int(self.total_pending_outbound) - amt)
         self.total_value_locked = u256(int(self.total_value_locked) - amt)
 
         rec["status"] = "RECONCILED"
-        rec["parent_tx_hash"] = parent_tx_hash
-        rec["child_tx_hash"] = child_tx_hash
+        rec["parent_tx_hash"] = p_hash
+        rec["child_tx_hash"] = c_hash
         rec["reconciled_at"] = self._now()
         self.pending_outbound[u256(withdrawal_id)] = json.dumps(rec)
         self._assert_invariant()
@@ -555,12 +739,6 @@ class LexVault(gl.Contract):
         self.pull_credits[sender] = u256(curr_credit + deposit)
         self.total_credits = u256(int(self.total_credits) + deposit)
         self._assert_invariant()
-
-    @gl.public.write
-    def advance_time(self, seconds: int) -> None:
-        """Test helper to simulate the passage of time for stage deadlines."""
-        if seconds > 0:
-            self.time_offset = u256(int(self.time_offset) + seconds)
 
     # =========================================================================
     # Views
@@ -580,8 +758,7 @@ class LexVault(gl.Contract):
             "bootstrapper": self.bootstrapper,
             "charter_gate": self.charter_gate,
             "drift_auditor": self.drift_auditor,
-            "stage_timeout_seconds": int(self.stage_timeout_seconds),
-            "time_offset": int(self.time_offset)
+            "stage_timeout_seconds": int(self.stage_timeout_seconds)
         })
 
     @gl.public.view

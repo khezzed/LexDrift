@@ -64,9 +64,11 @@ def test_lex_vault_structure():
         "record_drift_verdict",
         "expire_stage",
         "request_withdrawal",
-        "reconcile_withdrawal",
-        "advance_time"
+        "reconcile_withdrawal"
     ]
+    assert "advance_time" not in methods, "Public time-offset helper advance_time must be removed"
+    top_funcs = {item.name for item in tree.body if isinstance(item, ast.FunctionDef)}
+    assert "_verify_transfer_finality_nondet" in top_funcs, "LexVault missing _verify_transfer_finality_nondet verifier"
     expected_payables = [
         "open_charter",
         "seal_claim",

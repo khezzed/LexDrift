@@ -51,6 +51,9 @@ async function main() {
   console.log(`[RPC Endpoint] : ${proof.network.rpcUrl}`);
   console.log(`[Runner Hash]  : ${proof.runnerHash}`);
   console.log(`[Vault]        : ${proof.contracts.lexVault.address}`);
+  if (proof.contracts.securedLexVault?.address) {
+    console.log(`[SecuredVault] : ${proof.contracts.securedLexVault.address}`);
+  }
   console.log(`[Gate]         : ${proof.contracts.charterGate.address}`);
   console.log(`[Auditor]      : ${proof.contracts.driftAuditor.address}`);
   console.log('---------------------------------------------------------------');
@@ -67,6 +70,7 @@ async function main() {
   });
 
   const vaultAddress = proof.contracts.lexVault.address as `0x${string}`;
+  const securedVaultAddress = (proof.contracts.securedLexVault?.address || proof.contracts.lexVault.address) as `0x${string}`;
   const gateAddress = proof.contracts.charterGate.address as `0x${string}`;
   const auditorAddress = proof.contracts.driftAuditor.address as `0x${string}`;
 
@@ -76,7 +80,7 @@ async function main() {
   const localGateCode = fs.readFileSync(path.resolve('contracts/charter_gate.py'), 'utf-8');
   const localAuditorCode = fs.readFileSync(path.resolve('contracts/drift_auditor.py'), 'utf-8');
 
-  const onChainVaultCode = await callWithRetry(() => client.getContractCode(vaultAddress));
+  const onChainVaultCode = await callWithRetry(() => client.getContractCode(securedVaultAddress));
   const onChainGateCode = await callWithRetry(() => client.getContractCode(gateAddress));
   const onChainAuditorCode = await callWithRetry(() => client.getContractCode(auditorAddress));
 

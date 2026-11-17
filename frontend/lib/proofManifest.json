@@ -21,6 +21,14 @@
       "onChainSha256": "76efab36bbd714c2e606598317ae3005de757a5862f149f8b668f31147b6ba72",
       "verified": true
     },
+    "securedLexVault": {
+      "address": "0x99923a29Fc61B178D2FcE7f99F135922db964522",
+      "deployTxHash": "0x080182623d047632b563d829a01c25917dfc7ac2ac27cd65416cf51fba6c2e6a",
+      "configureTxHash": "0xd3e17d02cd02165a68eb4a4ca534109aef744647694b3770c762b722b034ff0c",
+      "sourceSha256": "096c8e54ef4805ad6efbd106ecf93f003678da514f0ea08bf7e894dfa465c8d4",
+      "onChainSha256": "096c8e54ef4805ad6efbd106ecf93f003678da514f0ea08bf7e894dfa465c8d4",
+      "verified": true
+    },
     "charterGate": {
       "address": "0xa7ae55747b61d4Eb9d7024F0C19bd6499262c51c",
       "deployTxHash": "0xab2389771250a24fcaa2f42d6b3833bd4c7e0aba72fa48460ee9eb6ba66246b0",

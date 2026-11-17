@@ -106,7 +106,10 @@ class MockWebResponse:
             self.headers = {}
 
 
+import json as _json
+
 mock_web_responses: dict[str, MockWebResponse] = {}
+mock_rpc_transactions: dict[str, dict] = {}
 mock_llm_responses: list[Callable[[str], Any]] = []
 mock_llm_dict: dict[str, Any] = {}
 deployed_contracts: dict[str, Any] = {}
@@ -232,9 +235,19 @@ class GenLayerMock:
         self.nondet = types.SimpleNamespace(
             web=types.SimpleNamespace(
                 get=self._web_get,
+                post=self._web_post,
                 Response=MockWebResponse,
             ),
             exec_prompt=self._exec_prompt,
+        )
+
+        def _evm_contract_interface(cls):
+            def _factory(address: Address):
+                return _ContractAtProxy(address)
+            return _factory
+
+        self.evm = types.SimpleNamespace(
+            contract_interface=_evm_contract_interface,
         )
 
         self.public = types.SimpleNamespace(
@@ -260,6 +273,22 @@ class GenLayerMock:
                 raise resp
             return resp
         return MockWebResponse(status=404, body=b'{"error": "Not Found"}')
+
+    def _web_post(self, url: str, *, body: Any = None, headers: dict[str, str | bytes] = None) -> MockWebResponse:
+        raw_body = body.decode("utf-8", errors="replace") if isinstance(body, bytes) else str(body or "{}")
+        try:
+            req = _json.loads(raw_body)
+        except Exception:
+            req = {}
+        if req.get("method") == "eth_getTransactionByHash":
+            params = req.get("params") or []
+            tx_hash = str(params[0]).lower() if params else ""
+            tx_obj = mock_rpc_transactions.get(tx_hash)
+            return MockWebResponse(
+                status=200,
+                body=_json.dumps({"jsonrpc": "2.0", "id": req.get("id", 1), "result": tx_obj}).encode("utf-8")
+            )
+        return MockWebResponse(status=404, body=b'{"error": "Unsupported mock RPC POST"}')
 
     def _exec_prompt(self, prompt: str, **kwargs: Any) -> Any:
         for key, handler in mock_llm_dict.items():
@@ -302,6 +331,7 @@ ATTACKER_ADDR = Address("0x7777777777777777777777777777777777777777")
 def reset_genlayer_env():
     """Resets mock state before each test."""
     mock_web_responses.clear()
+    mock_rpc_transactions.clear()
     mock_llm_responses.clear()
     mock_llm_dict.clear()
     deployed_contracts.clear()

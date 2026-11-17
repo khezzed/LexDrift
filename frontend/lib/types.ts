@@ -142,6 +142,14 @@ export interface ProofManifest {
       onChainSha256: string;
       verified: boolean;
     };
+    securedLexVault?: {
+      address: string;
+      deployTxHash: string;
+      configureTxHash?: string;
+      sourceSha256: string;
+      onChainSha256: string;
+      verified: boolean;
+    };
     charterGate: {
       address: string;
       deployTxHash: string;

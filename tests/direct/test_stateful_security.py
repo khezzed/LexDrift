@@ -13,6 +13,7 @@ from conftest import (
     UserError,
     MockWebResponse,
     mock_web_responses,
+    mock_rpc_transactions,
     mock_llm_dict,
     deployed_contracts,
     BOOTSTRAPPER_ADDR,
@@ -459,15 +460,16 @@ def test_case_e_stage_deadline_timeout_and_fund_recovery(system):
     gl_mock.message.value = u256(3000)
     charter_id = int(vault.open_charter(baseline_url, rule))
 
-    # Advance time past stage deadline (1800s)
-    vault.advance_time(1900)
+    # Advance trusted GenVM message time past stage deadline (1800s)
+    gl_mock.message_raw = {"datetime": 1700001900}
+    gl_mock.message.timestamp = 1700001900
 
     # Worker callback now rejected due to stage timeout
     gl_mock.message.sender_address = GATE_ADDR
     with pytest.raises(UserError, match="STAGE_EXPIRED"):
         vault.record_charter_attestation(charter_id, json.dumps({"status": "ACTIVE"}))
 
-    # Anyone can invoke expire_stage to recover funds
+    # Anyone can invoke expire_stage AFTER trusted GenVM deadline elapses
     gl_mock.message.sender_address = ATTACKER_ADDR  # Any third party
     vault.expire_stage("CHARTER", charter_id)
 
@@ -518,12 +520,33 @@ def test_case_f_pull_withdrawal_and_recapitalization(system):
     assert acc2["total_pending_outbound"] == 4000
     assert acc2["total_value_locked"] == 10000
 
-    # 3. Reconcile withdrawal with cross-chain tx hashes
-    vault.reconcile_withdrawal(wid, "0xparent_hash_abc", "0xchild_hash_def")
+    # 3. Reconcile withdrawal with authenticated finalized parent/child tx receipts
+    parent_hash = "0x" + "11" * 32
+    child_hash = "0x" + "22" * 32
+    mock_rpc_transactions[parent_hash] = {
+        "hash": parent_hash,
+        "statusName": "FINALIZED",
+        "from_address": str(SPONSOR_ADDR),
+        "to_address": str(VAULT_ADDR),
+        "result_name": "MAJORITY_AGREE",
+    }
+    mock_rpc_transactions[child_hash] = {
+        "hash": child_hash,
+        "statusName": "FINALIZED",
+        "triggered_by": parent_hash,
+        "from_address": str(VAULT_ADDR),
+        "to_address": str(SPONSOR_ADDR),
+        "value": 4000,
+        "value_credited": True,
+        "result_name": "MAJORITY_AGREE",
+    }
+
+    vault.reconcile_withdrawal(wid, parent_hash, child_hash)
 
     w_rec = json.loads(vault.get_withdrawal(wid))
     assert w_rec["status"] == "RECONCILED"
-    assert w_rec["parent_tx_hash"] == "0xparent_hash_abc"
+    assert w_rec["parent_tx_hash"] == parent_hash
+    assert w_rec["child_tx_hash"] == child_hash
 
     acc3 = json.loads(vault.get_accounting())
     assert acc3["invariant_valid"] is True
@@ -541,3 +564,200 @@ def test_front_running_protection_commit_reveal(system):
     gl_mock.message.sender_address = CHALLENGER_ADDR
     with pytest.raises(UserError, match="CLAIM_NOT_FOUND"):
         vault.disclose_claim(999, candidate_url, "salt")
+
+
+def test_trusted_genvm_time_fails_closed_when_unavailable(system):
+    """
+    Security Proof 1: LexVault must fail closed when trusted GenVM message time is missing,
+    zero, boolean, or malformed (never falling back to local wall-clock time).
+    """
+    vault = system["vault"]
+
+    # Missing both message_raw["datetime"] and message.timestamp
+    gl_mock.message_raw = None
+    gl_mock.message.timestamp = None
+    with pytest.raises(UserError, match="UNAVAILABLE_TRUSTED_TIME"):
+        vault._now()
+
+    gl_mock.message.sender_address = SPONSOR_ADDR
+    gl_mock.message.value = u256(2000)
+    with pytest.raises(UserError, match="UNAVAILABLE_TRUSTED_TIME"):
+        vault.open_charter(
+            "https://raw.githubusercontent.com/hashicorp/terraform/404a742884a441e17578ab865e1eb84ef468c4d5/LICENSE",
+            "Maintain MPL-2.0 licensing."
+        )
+
+    # Zero or invalid timestamp fails closed
+    gl_mock.message_raw = {"datetime": 0}
+    with pytest.raises(UserError, match="UNAVAILABLE_TRUSTED_TIME"):
+        vault._now()
+
+    gl_mock.message_raw = {"datetime": "not-an-iso-timestamp"}
+    with pytest.raises(UserError, match="UNAVAILABLE_TRUSTED_TIME"):
+        vault._now()
+
+
+def test_arbitrary_account_cannot_force_expiry(system):
+    """
+    Security Proof 2: Public time-offset controls are removed, and no arbitrary account
+    can manipulate contract time or force early expiry before the trusted GenVM deadline.
+    """
+    vault = system["vault"]
+    gate = system["gate"]
+
+    assert not hasattr(vault, "advance_time"), "Public advance_time control must not exist"
+    assert not hasattr(vault, "time_offset"), "Mutable time_offset state must not exist"
+    cfg = json.loads(vault.get_config())
+    assert "time_offset" not in cfg
+
+    baseline_url = "https://raw.githubusercontent.com/hashicorp/terraform/404a742884a441e17578ab865e1eb84ef468c4d5/LICENSE"
+    rule = "Maintain MPL-2.0 licensing."
+
+    # 1. Open Charter #1 at t = 1700000000 (deadline = 1700001800)
+    gl_mock.message_raw = {"datetime": 1700000000}
+    gl_mock.message.timestamp = 1700000000
+    gl_mock.message.sender_address = SPONSOR_ADDR
+    gl_mock.message.value = u256(3000)
+    charter_id = int(vault.open_charter(baseline_url, rule))
+
+    # Attacker tries to force Charter expiry before deadline elapses
+    gl_mock.message.sender_address = ATTACKER_ADDR
+    gl_mock.message.value = u256(0)
+    gl_mock.message_raw = {"datetime": 1700001799}
+    with pytest.raises(UserError, match="STAGE_NOT_EXPIRED"):
+        vault.expire_stage("CHARTER", charter_id)
+
+    # 2. Attest Charter ACTIVE, then seal & disclose Claim #1 at t = 1700000100 (deadline = 1700001900)
+    mock_web_responses[baseline_url] = MockWebResponse(
+        status=200,
+        body=b"Mozilla Public License Version 2.0\nSection 3.1 Availability of Source Code."
+    )
+    mock_llm_dict["CharterGate"] = json.dumps({
+        "observable_criterion": True,
+        "specific_scope": True,
+        "falsifiable_condition": True,
+        "baseline_entails_guarantee": True,
+        "baseline_quote": "Mozilla Public License Version 2.0",
+        "reason": "Concrete covenant"
+    })
+    gl_mock.message_raw = {"datetime": 1700000100}
+    gl_mock.message.sender_address = GATE_ADDR
+    gl_mock.message.contract_address = GATE_ADDR
+    gate.attest_charter(charter_id, baseline_url, rule)
+
+    candidate_url = "https://raw.githubusercontent.com/hashicorp/terraform/606c742884a441e17578ab865e1eb84ef468c4f1/LICENSE"
+    salt = "claim_salt"
+    gl_mock.message.contract_address = VAULT_ADDR
+    gl_mock.message.sender_address = CHALLENGER_ADDR
+    gl_mock.message.value = u256(500)
+    claim_id = int(vault.seal_claim(charter_id, compute_commitment_hash(candidate_url, salt)))
+    gl_mock.message.value = u256(0)
+    vault.disclose_claim(claim_id, candidate_url, salt)
+
+    # Attacker tries to force Claim expiry before deadline elapses
+    gl_mock.message.sender_address = ATTACKER_ADDR
+    gl_mock.message_raw = {"datetime": 1700001899}
+    with pytest.raises(UserError, match="STAGE_NOT_EXPIRED"):
+        vault.expire_stage("CLAIM", claim_id)
+
+    # Verify Claim and Charter remain untouched
+    claim = json.loads(vault.get_claim(claim_id))
+    assert claim["status"] == "AUDITING"
+    assert claim["bond"] == 500
+
+
+def test_arbitrary_account_and_unverified_tx_cannot_reconcile_withdrawal(system):
+    """
+    Security Proof 3: Arbitrary accounts cannot reconcile another user's withdrawal,
+    unauthenticated/unfinalized/mismatched transfer evidence is rejected, and consumed
+    transfer receipts cannot be replayed.
+    """
+    vault = system["vault"]
+
+    # Fund sponsor pull credits and create two pending withdrawals (wid=1, wid=2)
+    gl_mock.message.sender_address = SPONSOR_ADDR
+    gl_mock.message.contract_address = VAULT_ADDR
+    gl_mock.message.value = u256(5000)
+    vault.recapitalize_payouts()
+
+    gl_mock.message.value = u256(0)
+    wid1 = int(vault.request_withdrawal(2000))
+    wid2 = int(vault.request_withdrawal(2000))
+
+    valid_parent = "0x" + "aa" * 32
+    valid_child = "0x" + "bb" * 32
+
+    # 1. Arbitrary account (ATTACKER_ADDR) cannot reconcile SPONSOR's withdrawal even with valid RPC txs
+    mock_rpc_transactions[valid_parent] = {
+        "hash": valid_parent,
+        "statusName": "FINALIZED",
+        "from_address": str(SPONSOR_ADDR),
+        "to_address": str(VAULT_ADDR),
+        "result_name": "MAJORITY_AGREE",
+    }
+    mock_rpc_transactions[valid_child] = {
+        "hash": valid_child,
+        "statusName": "FINALIZED",
+        "triggered_by": valid_parent,
+        "from_address": str(VAULT_ADDR),
+        "to_address": str(SPONSOR_ADDR),
+        "value": 2000,
+        "value_credited": True,
+        "result_name": "MAJORITY_AGREE",
+    }
+
+    gl_mock.message.sender_address = ATTACKER_ADDR
+    with pytest.raises(UserError, match="UNAUTHORIZED_RECONCILER"):
+        vault.reconcile_withdrawal(wid1, valid_parent, valid_child)
+
+    # 2. Malformed or identical hashes fail closed
+    gl_mock.message.sender_address = SPONSOR_ADDR
+    with pytest.raises(UserError, match="INVALID_TRANSFER_FINALITY_EVIDENCE"):
+        vault.reconcile_withdrawal(wid1, "not-a-hash", valid_child)
+
+    with pytest.raises(UserError, match="INVALID_TRANSFER_FINALITY_EVIDENCE"):
+        vault.reconcile_withdrawal(wid1, valid_parent, valid_parent)
+
+    # 3. Unfinalized or uncredited child tx fails closed
+    bad_child = "0x" + "cc" * 32
+    mock_rpc_transactions[bad_child] = {
+        "hash": bad_child,
+        "statusName": "ACCEPTED",
+        "triggered_by": valid_parent,
+        "from_address": str(VAULT_ADDR),
+        "to_address": str(SPONSOR_ADDR),
+        "value": 2000,
+        "value_credited": False,
+        "result_name": "MAJORITY_AGREE",
+    }
+    with pytest.raises(UserError, match="INVALID_TRANSFER_FINALITY_EVIDENCE"):
+        vault.reconcile_withdrawal(wid1, valid_parent, bad_child)
+
+    # 4. Wrong recipient or amount in child tx fails closed
+    wrong_amt_child = "0x" + "dd" * 32
+    mock_rpc_transactions[wrong_amt_child] = {
+        "hash": wrong_amt_child,
+        "statusName": "FINALIZED",
+        "triggered_by": valid_parent,
+        "from_address": str(VAULT_ADDR),
+        "to_address": str(SPONSOR_ADDR),
+        "value": 999,
+        "value_credited": True,
+    }
+    with pytest.raises(UserError, match="INVALID_TRANSFER_FINALITY_EVIDENCE"):
+        vault.reconcile_withdrawal(wid1, valid_parent, wrong_amt_child)
+
+    # 5. Valid recipient + authenticated finalized evidence succeeds for wid1
+    vault.reconcile_withdrawal(wid1, valid_parent, valid_child)
+    assert json.loads(vault.get_withdrawal(wid1))["status"] == "RECONCILED"
+
+    # 6. Replaying consumed parent or child hash against wid2 is blocked
+    with pytest.raises(UserError, match="RECEIPT_ALREADY_CONSUMED"):
+        vault.reconcile_withdrawal(wid2, valid_parent, valid_child)
+
+    # Pending outbound for wid2 remains intact and accounting invariant still holds
+    assert json.loads(vault.get_withdrawal(wid2))["status"] == "PENDING"
+    acc = json.loads(vault.get_accounting())
+    assert acc["invariant_valid"] is True
+    assert acc["total_pending_outbound"] == 2000
+    assert acc["total_value_locked"] == 3000
